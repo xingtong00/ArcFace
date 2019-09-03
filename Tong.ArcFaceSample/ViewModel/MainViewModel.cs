@@ -14,6 +14,7 @@ using GalaSoft.MvvmLight;
 using GalaSoft.MvvmLight.Messaging;
 using Tong.ArcFace;
 using Tong.ArcFace.ArcStruct;
+using Tong.ArcFace.Util;
 using Tong.ArcFaceSample.Properties;
 using Brushes = System.Windows.Media.Brushes;
 using Pen = System.Windows.Media.Pen;
@@ -141,8 +142,10 @@ namespace Tong.ArcFaceSample.ViewModel
                     Bitmap bitmap = _recognitionQueue.Dequeue();
                     if (bitmap != null)
                     {
-                        TrackFace(bitmap);
-                        bitmap?.Dispose();
+                        ImageInfo imageInfo = new ImageInfo(bitmap);
+                        TrackFace(imageInfo);
+                        imageInfo.Dispose();
+                        bitmap.Dispose();
                     }
                 }
                 catch (ThreadAbortException)
@@ -159,13 +162,13 @@ namespace Tong.ArcFaceSample.ViewModel
         /// <summary>
         /// 识别人脸
         /// </summary>
-        /// <param name="bitmap">待识别图片</param>
-        private void TrackFace(Bitmap bitmap)
+        /// <param name="imageInfo">待识别图片信息</param>
+        private void TrackFace(ImageInfo imageInfo)
         {
             try
             {
-                var faces = Recognition.Instance.DetectFaces(bitmap);
-                GenerateFrameImg(bitmap.Height, bitmap.Width, faces);
+                var faces = Recognition.Instance.DetectFaces(imageInfo);
+                GenerateFrameImg(imageInfo.Height, imageInfo.Width, faces);
             }
             catch (Exception ex)
             {

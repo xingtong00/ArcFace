@@ -65,6 +65,7 @@ namespace Tong.ArcFace
         /// <summary>
         /// 初始化引擎
         /// </summary>
+        /// <param name="detectionMode">VIDEO 视频模式 | IMAGE 图片模式</param>
         /// <param name="orientPriority">检测脸部的角度优先值，推荐仅检测单一角度，效果更优</param>
         /// <param name="scale">
         /// 用于数值化表示的最小人脸尺寸，该尺寸代表人脸尺寸相对于图片长边的占比。
@@ -88,16 +89,13 @@ namespace Tong.ArcFace
         /// </summary>
         /// <param name="image">图像</param>
         /// <returns>人脸检测的结果</returns>
-        public List<FaceRect> DetectFaces(Image image)
+        public List<FaceRect> DetectFaces(ImageInfo image)
         {
             lock (locks)
             {
                 NeedInit();
-                ImageInfo imageInfo = CheckImage(image);
-                int result = ArcFaceApi.DetectFaces(_engine, imageInfo.Width, imageInfo.Height,
-                                                                       imageInfo.Format, imageInfo.ImageData,
-                                                                       out var faceInfo);
-                imageInfo.Dispose();
+                int result = ArcFaceApi.DetectFaces(_engine, image.Width, image.Height,
+                    image.Format, image.ImageData, out var faceInfo);
                 CheckResult(result);
                 List<FaceRect> faces = new List<FaceRect>();
                 for (int i = 0; i < faceInfo.FaceNum; i++)
@@ -128,22 +126,6 @@ namespace Tong.ArcFace
         {
             if (_engine == IntPtr.Zero)
                 InitEngine();
-        }
-
-        private ImageInfo CheckImage(Image image)
-        {
-            if (image == null)
-                throw new ArgumentNullException("image为空");
-            // 调整图片大小SDK只支持4的倍数
-            if (image.Width > 1546 || image.Height > 1536)
-            {
-                image = ImageUtil.ScaleImage(image, 1536, 1536);
-            }
-            else
-            {
-                image = ImageUtil.ScaleImage(image, image.Width, image.Height);
-            }
-            return ImageUtil.ReadImage(image);
         }
 
         public void Dispose()
