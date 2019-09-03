@@ -169,6 +169,7 @@ namespace Tong.ArcFaceSample.ViewModel
             {
                 var recognizeResult = Recognition.Instance.DetectFaces(imageInfo);
                 Recognition.Instance.DetectLiveness(imageInfo, recognizeResult);
+                Recognition.Instance.DetectAge(imageInfo, recognizeResult);
                 GenerateFrameImg(imageInfo.Height, imageInfo.Width, recognizeResult);
             }
             catch (Exception ex)
@@ -182,7 +183,7 @@ namespace Tong.ArcFaceSample.ViewModel
         /// </summary>
         /// <param name="imgHeight">图片高度</param>
         /// <param name="imgWidth">图片宽度</param>
-        /// <param name="faces">人脸位置信息</param>
+        /// <param name="recognizeResult">人脸位置信息</param>
         private void GenerateFrameImg(int imgHeight, int imgWidth, RecognizeResult recognizeResult)
         {
             DrawingVisual drawingVisual = new DrawingVisual();

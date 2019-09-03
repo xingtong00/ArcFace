@@ -85,7 +85,7 @@ namespace Tong.ArcFace
         }
 
         /// <summary>
-        /// 获取人脸检测的结果
+        /// 检测人脸
         /// </summary>
         /// <param name="imageInfo">图像</param>
         /// <returns>人脸检测的结果</returns>
@@ -109,6 +109,15 @@ namespace Tong.ArcFace
             }
         }
 
+        /// <summary>
+        /// 检测活体
+        /// <para>
+        /// 需要先执行人脸检测
+        /// </para>
+        /// </summary>
+        /// <param name="imageInfo">图像</param>
+        /// <param name="recognizeResult">人脸检测的结果</param>
+        /// <param name="cameraType">相机类型</param>
         public void DetectLiveness(ImageInfo imageInfo, RecognizeResult recognizeResult, CameraType cameraType = CameraType.Bgr)
         {
             if (recognizeResult == null)
@@ -127,6 +136,8 @@ namespace Tong.ArcFace
                     : ArcFaceApi.GetLivenessScoreIr(_engine, pLivenessInfo);
                 CheckResult(result);
                 recognizeResult.LivenessInfo = Marshal.PtrToStructure<LivenessInfo>(pLivenessInfo);
+                if (recognizeResult.LivenessInfo.Num != recognizeResult.Results.Count)
+                    return;
                 for (int i = 0; i < recognizeResult.Results.Count; i++)
                 {
                     recognizeResult.Results[i].Live = Marshal.PtrToStructure<int>(recognizeResult.LivenessInfo.IsLive + Marshal.SizeOf<int>() * i);
@@ -143,7 +154,44 @@ namespace Tong.ArcFace
                 Marshal.FreeHGlobal(pLivenessInfo);
             }
         }
-        
+
+        /// <summary>
+        /// 检测年纪
+        /// <para>
+        /// 需要先执行人脸检测
+        /// </para>
+        /// </summary>
+        /// <param name="imageInfo">图像</param>
+        /// <param name="recognizeResult">人脸检测的结果</param>
+        public void DetectAge(ImageInfo imageInfo, RecognizeResult recognizeResult)
+        {
+            if (recognizeResult == null)
+                throw new ArgumentNullException(nameof(recognizeResult));
+            if (recognizeResult.MultiFaceInfo.FaceNum == 0)
+                return;
+            IntPtr pAgeInfo = Marshal.AllocHGlobal(Marshal.SizeOf<AgeInfo>());
+            try
+            {
+                var result = ArcFaceApi.Process(_engine, imageInfo.Width, imageInfo.Height, imageInfo.Format,
+                    imageInfo.ImageData, recognizeResult.MultiFaceInfo, EngineMode.Age);
+                CheckResult(result);
+                result = ArcFaceApi.GetAge(_engine, pAgeInfo);
+                CheckResult(result);
+                recognizeResult.AgeInfo = Marshal.PtrToStructure<AgeInfo>(pAgeInfo);
+                if(recognizeResult.AgeInfo.Num != recognizeResult.Results.Count)
+                    return;
+                for (int i = 0; i < recognizeResult.Results.Count; i++)
+                {
+                    recognizeResult.Results[i].Age = Marshal.PtrToStructure<int>(recognizeResult.AgeInfo.AgeArray + Marshal.SizeOf<int>() * i);
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
+        }
+
         /// <summary>
         /// 检查结果
         /// </summary>
