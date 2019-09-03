@@ -79,6 +79,7 @@
     <Compile Include="Recognition.cs" />
     <Compile Include="Util\ImageInfo.cs" />
     <Compile Include="Util\ImageUtil.cs" />
+    <Compile Include="Util\RecognizeResult.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Libs\x64\libarcsoft_face.dll">

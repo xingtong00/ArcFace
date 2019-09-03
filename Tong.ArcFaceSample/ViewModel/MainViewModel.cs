@@ -167,8 +167,9 @@ namespace Tong.ArcFaceSample.ViewModel
         {
             try
             {
-                var faces = Recognition.Instance.DetectFaces(imageInfo);
-                GenerateFrameImg(imageInfo.Height, imageInfo.Width, faces);
+                var recognizeResult = Recognition.Instance.DetectFaces(imageInfo);
+                Recognition.Instance.DetectLiveness(imageInfo, recognizeResult);
+                GenerateFrameImg(imageInfo.Height, imageInfo.Width, recognizeResult);
             }
             catch (Exception ex)
             {
@@ -182,7 +183,7 @@ namespace Tong.ArcFaceSample.ViewModel
         /// <param name="imgHeight">图片高度</param>
         /// <param name="imgWidth">图片宽度</param>
         /// <param name="faces">人脸位置信息</param>
-        private void GenerateFrameImg(int imgHeight, int imgWidth, List<FaceRect> faces)
+        private void GenerateFrameImg(int imgHeight, int imgWidth, RecognizeResult recognizeResult)
         {
             DrawingVisual drawingVisual = new DrawingVisual();
             using (DrawingContext drawingContext = drawingVisual.RenderOpen())
@@ -190,9 +191,9 @@ namespace Tong.ArcFaceSample.ViewModel
                 Pen pen1 = new Pen(Brushes.Gold, 1);
                 Pen pen2 = new Pen(Brushes.LightBlue, 3);
 
-                for (int i = 0; i < faces.Count; i++)
+                for (int i = 0; i < recognizeResult.Results.Count; i++)
                 {
-                    Rectangle rect = faces[i].Rectangle;
+                    Rectangle rect = recognizeResult.Results[i].FaceRect.Rectangle;
                     var width = rect.Width / 4;
                     //左上上
                     drawingContext.DrawLine(pen2, new Point(rect.Left, rect.Top), new Point(rect.Left + width, rect.Top));

@@ -87,26 +87,63 @@ namespace Tong.ArcFace
         /// <summary>
         /// 获取人脸检测的结果
         /// </summary>
-        /// <param name="image">图像</param>
+        /// <param name="imageInfo">图像</param>
         /// <returns>人脸检测的结果</returns>
-        public List<FaceRect> DetectFaces(ImageInfo image)
+        public RecognizeResult DetectFaces(ImageInfo imageInfo)
         {
             lock (locks)
             {
                 NeedInit();
-                int result = ArcFaceApi.DetectFaces(_engine, image.Width, image.Height,
-                    image.Format, image.ImageData, out var faceInfo);
+                int result = ArcFaceApi.DetectFaces(_engine, imageInfo.Width, imageInfo.Height,
+                    imageInfo.Format, imageInfo.ImageData, out var faceInfo);
                 CheckResult(result);
-                List<FaceRect> faces = new List<FaceRect>();
+                RecognizeResult recognizeResult = new RecognizeResult();
+                recognizeResult.MultiFaceInfo = faceInfo;
                 for (int i = 0; i < faceInfo.FaceNum; i++)
                 {
-                    FaceRect face = Marshal.PtrToStructure<FaceRect>(faceInfo.FaceRects + Marshal.SizeOf<FaceRect>() * i);
-                    faces.Add(face);
+                    Result temp = new Result();
+                    temp.FaceRect = Marshal.PtrToStructure<FaceRect>(faceInfo.FaceRects + Marshal.SizeOf<FaceRect>() * i);
+                    recognizeResult.Results.Add(temp);
                 }
-                return faces;
+                return recognizeResult;
             }
         }
 
+        public void DetectLiveness(ImageInfo imageInfo, RecognizeResult recognizeResult, CameraType cameraType = CameraType.Bgr)
+        {
+            if (recognizeResult == null)
+                throw new ArgumentNullException(nameof(recognizeResult));
+            if (recognizeResult.MultiFaceInfo.FaceNum == 0)
+                return;
+            IntPtr pLivenessInfo = Marshal.AllocHGlobal(Marshal.SizeOf<LivenessInfo>());
+            try
+            {
+                var result = ArcFaceApi.Process(_engine, imageInfo.Width, imageInfo.Height, imageInfo.Format,
+                    imageInfo.ImageData, recognizeResult.MultiFaceInfo,
+                    cameraType == CameraType.Bgr ? EngineMode.Liveness : EngineMode.IrLiveness);
+                CheckResult(result);
+                result = cameraType == CameraType.Bgr
+                    ? ArcFaceApi.GetLivenessScore(_engine, pLivenessInfo)
+                    : ArcFaceApi.GetLivenessScoreIr(_engine, pLivenessInfo);
+                CheckResult(result);
+                recognizeResult.LivenessInfo = Marshal.PtrToStructure<LivenessInfo>(pLivenessInfo);
+                for (int i = 0; i < recognizeResult.Results.Count; i++)
+                {
+                    recognizeResult.Results[i].Live = Marshal.PtrToStructure<int>(recognizeResult.LivenessInfo.IsLive + Marshal.SizeOf<int>() * i);
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
+            finally
+            {
+
+                Marshal.FreeHGlobal(pLivenessInfo);
+            }
+        }
+        
         /// <summary>
         /// 检查结果
         /// </summary>
