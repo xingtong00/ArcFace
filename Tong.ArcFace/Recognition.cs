@@ -76,10 +76,9 @@ namespace Tong.ArcFace
         /// </param>
         /// <param name="maxFaceNumber">最大需要检测的人脸个数[1-50]</param>
         /// <param name="combinedMask">用户选择需要检测的功能组合，可单个或多个</param>
-        /// <param name="busyFlag">是否更新状态标志</param>
         /// <returns>结果</returns>
         public void InitEngine(uint detectionMode = DetectionMode.Image, OrientPriority orientPriority = OrientPriority.Orient0Only, int scale = 16,
-                               int maxFaceNumber = 5, EngineMode combinedMask = EngineMode.RgbAll, bool busyFlag = true)
+                               int maxFaceNumber = 5, EngineMode combinedMask = EngineMode.RgbAll)
         {
             int result = ArcFaceApi.InitEngine(detectionMode, orientPriority, scale, maxFaceNumber, combinedMask, ref _engine);
             CheckResult(result);
@@ -127,9 +126,11 @@ namespace Tong.ArcFace
                 return;
             try
             {
-                var result = ArcFaceApi.Process(_engine, imageInfo.Width, imageInfo.Height, imageInfo.Format,
-                    imageInfo.ImageData, recognizeResult.MultiFaceInfo,
-                    cameraType == CameraType.Bgr ? EngineMode.Liveness : EngineMode.IrLiveness);
+                var result = cameraType == CameraType.Bgr
+                    ? ArcFaceApi.Process(_engine, imageInfo.Width, imageInfo.Height, imageInfo.Format,
+                    imageInfo.ImageData, recognizeResult.MultiFaceInfo,EngineMode.Liveness)
+                    : ArcFaceApi.ProcessIr(_engine, imageInfo.Width, imageInfo.Height, imageInfo.Format, 
+                    imageInfo.ImageData, recognizeResult.MultiFaceInfo, EngineMode.IrLiveness);
                 CheckResult(result);
                 LivenessInfo livenessInfo;
                 result = cameraType == CameraType.Bgr
@@ -139,9 +140,9 @@ namespace Tong.ArcFace
                 recognizeResult.LivenessInfo = livenessInfo;
                 if (recognizeResult.LivenessInfo.Num != recognizeResult.Results.Count)
                     return;
-                for (int i = 0; i < recognizeResult.Results.Count; i++)
+                foreach (var r in recognizeResult.Results)
                 {
-                    recognizeResult.Results[i].Live = (Liveness)Marshal.PtrToStructure<int>(recognizeResult.LivenessInfo.IsLive);
+                    r.Live = (Liveness)Marshal.PtrToStructure<int>(recognizeResult.LivenessInfo.IsLive);
                 }
             }
             catch (Exception e)
@@ -173,15 +174,6 @@ namespace Tong.ArcFace
                 if ((combinedMask & EngineMode.Liveness) > 0)
                 {
                     result = ArcFaceApi.GetLivenessScore(_engine, out var livenessInfo);
-                    CheckResult(result);
-                    recognizeResult.LivenessInfo = livenessInfo;
-                    if (recognizeResult.LivenessInfo.Num < 1)
-                        return recognizeResult;
-                    recognizeResult.Results[recognizeResult.MaxFaceIndex].Live = (Liveness)Marshal.PtrToStructure<int>(recognizeResult.LivenessInfo.IsLive);
-                }
-                if ((combinedMask & EngineMode.IrLiveness) > 0)
-                {
-                    result = ArcFaceApi.GetLivenessScoreIr(_engine, out var livenessInfo);
                     CheckResult(result);
                     recognizeResult.LivenessInfo = livenessInfo;
                     if (recognizeResult.LivenessInfo.Num < 1)

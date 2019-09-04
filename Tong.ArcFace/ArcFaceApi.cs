@@ -136,7 +136,7 @@ namespace Tong.ArcFace
         /// <param name="combinedMask">目前只支持传入ASF_IR_LIVENESS属性的传入，且初始化接口需要传入 </param>
         /// <returns></returns>
         [DllImport(DllPath, EntryPoint = "ASFProcess_IR", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int ProcessIr(IntPtr pEngine, int width, int height, int format, IntPtr imgData, IntPtr faceInfo, int combinedMask);
+        public static extern int ProcessIr(IntPtr pEngine, int width, int height, ImagePixelFormat format, IntPtr imgData, MultiFaceInfo faceInfo, EngineMode combinedMask);
 
         /// <summary>
         /// 获取IR活体结果
