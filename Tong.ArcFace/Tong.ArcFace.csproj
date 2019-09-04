@@ -80,6 +80,7 @@
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
     <Compile Include="Recognition.cs" />
+    <Compile Include="Util\FaceFeatureFactory.cs" />
     <Compile Include="Util\ImageInfo.cs" />
     <Compile Include="Util\ImageUtil.cs" />
     <Compile Include="Util\RecognizeResult.cs" />

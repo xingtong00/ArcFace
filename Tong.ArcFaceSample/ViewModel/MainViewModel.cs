@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows;
@@ -16,6 +17,7 @@ using Tong.ArcFace;
 using Tong.ArcFace.ArcEnum;
 using Tong.ArcFace.ArcStruct;
 using Tong.ArcFace.Util;
+using Tong.ArcFaceSample.Model;
 using Tong.ArcFaceSample.Properties;
 using Brushes = System.Windows.Media.Brushes;
 using Pen = System.Windows.Media.Pen;
@@ -86,7 +88,6 @@ namespace Tong.ArcFaceSample.ViewModel
 
         private readonly VideoCapture _capture;
         private readonly Mat _receivedImage = new Mat();
-        private Rectangle _cameraRect;
         /// <summary>
         /// 识别队列
         /// </summary>
@@ -95,6 +96,8 @@ namespace Tong.ArcFaceSample.ViewModel
         /// 最大识别人脸数
         /// </summary>
         private int _maxTrackFaceNum = 5;
+
+        private readonly List<Face> _features = new List<Face>();
 
         #endregion
 
@@ -170,6 +173,15 @@ namespace Tong.ArcFaceSample.ViewModel
             {
                 var recognizeResult = Recognition.Instance.DetectFaceInfo(imageInfo, EngineMode.Liveness | EngineMode.Age | EngineMode.Gender);
                 Recognition.Instance.ExtractFeature(imageInfo, recognizeResult, 0);
+                foreach (var result in recognizeResult.Results)
+                {
+                    if (_features.All(x => x.FaceFeature.Feature != result.FaceFeature.Feature))
+                    {
+                        Face face = new Face(result);
+                        face.Evaluation = "12312";
+                        _features.Add(face);
+                    }
+                }
                 GenerateFrameImg(imageInfo.Height, imageInfo.Width, recognizeResult);
             }
             catch (Exception ex)

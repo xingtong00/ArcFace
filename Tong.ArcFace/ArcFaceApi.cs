@@ -86,7 +86,7 @@ namespace Tong.ArcFace
         /// <param name="similarity">相似度(0~1)</param>
         /// <returns>调用结果</returns>
         [DllImport(DllPath, EntryPoint = "ASFFaceFeatureCompare", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int FaceFeatureCompare(IntPtr pEngine, IntPtr faceFeature1, IntPtr faceFeature2, ref float similarity);
+        public static extern int FaceFeatureCompare(IntPtr pEngine, FaceFeature faceFeature1, FaceFeature faceFeature2, ref float similarity);
 
         /// <summary>
         /// 获取年龄信息
