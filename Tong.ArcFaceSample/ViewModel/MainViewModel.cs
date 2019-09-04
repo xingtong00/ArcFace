@@ -13,6 +13,7 @@ using Emgu.CV;
 using GalaSoft.MvvmLight;
 using GalaSoft.MvvmLight.Messaging;
 using Tong.ArcFace;
+using Tong.ArcFace.ArcEnum;
 using Tong.ArcFace.ArcStruct;
 using Tong.ArcFace.Util;
 using Tong.ArcFaceSample.Properties;
@@ -167,9 +168,7 @@ namespace Tong.ArcFaceSample.ViewModel
         {
             try
             {
-                var recognizeResult = Recognition.Instance.DetectFaces(imageInfo);
-                Recognition.Instance.DetectLiveness(imageInfo, recognizeResult);
-                Recognition.Instance.DetectAge(imageInfo, recognizeResult);
+                var recognizeResult = Recognition.Instance.DetectFaceInfo(imageInfo, EngineMode.Liveness | EngineMode.Age | EngineMode.Gender);
                 GenerateFrameImg(imageInfo.Height, imageInfo.Width, recognizeResult);
             }
             catch (Exception ex)

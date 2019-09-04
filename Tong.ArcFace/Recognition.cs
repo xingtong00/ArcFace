@@ -140,7 +140,7 @@ namespace Tong.ArcFace
                     return;
                 for (int i = 0; i < recognizeResult.Results.Count; i++)
                 {
-                    recognizeResult.Results[i].Live = Marshal.PtrToStructure<int>(recognizeResult.LivenessInfo.IsLive + Marshal.SizeOf<int>() * i);
+                    recognizeResult.Results[i].Live = Marshal.PtrToStructure<int>(recognizeResult.LivenessInfo.IsLive);
                 }
             }
             catch (Exception e)
@@ -150,45 +150,92 @@ namespace Tong.ArcFace
             }
             finally
             {
-
                 Marshal.FreeHGlobal(pLivenessInfo);
             }
         }
 
         /// <summary>
-        /// 检测年纪
+        /// 检测多种属性
         /// <para>
         /// 需要先执行人脸检测
         /// </para>
         /// </summary>
         /// <param name="imageInfo">图像</param>
-        /// <param name="recognizeResult">人脸检测的结果</param>
-        public void DetectAge(ImageInfo imageInfo, RecognizeResult recognizeResult)
+        /// <param name="combinedMask">需要检测的组合</param>
+        /// <returns>检测的结果</returns>
+        public RecognizeResult DetectFaceInfo(ImageInfo imageInfo, EngineMode combinedMask)
         {
-            if (recognizeResult == null)
-                throw new ArgumentNullException(nameof(recognizeResult));
-            if (recognizeResult.MultiFaceInfo.FaceNum == 0)
-                return;
+            IntPtr pLivenessInfo = Marshal.AllocHGlobal(Marshal.SizeOf<LivenessInfo>());
             IntPtr pAgeInfo = Marshal.AllocHGlobal(Marshal.SizeOf<AgeInfo>());
+            IntPtr pGenderInfo = Marshal.AllocHGlobal(Marshal.SizeOf<GenderInfo>());
             try
             {
+                RecognizeResult recognizeResult = DetectFaces(imageInfo);
+                if (recognizeResult.MultiFaceInfo.FaceNum == 0)
+                    return recognizeResult;
                 var result = ArcFaceApi.Process(_engine, imageInfo.Width, imageInfo.Height, imageInfo.Format,
-                    imageInfo.ImageData, recognizeResult.MultiFaceInfo, EngineMode.Age);
+                    imageInfo.ImageData, recognizeResult.MultiFaceInfo, combinedMask);
                 CheckResult(result);
-                result = ArcFaceApi.GetAge(_engine, pAgeInfo);
-                CheckResult(result);
-                recognizeResult.AgeInfo = Marshal.PtrToStructure<AgeInfo>(pAgeInfo);
-                if(recognizeResult.AgeInfo.Num != recognizeResult.Results.Count)
-                    return;
-                for (int i = 0; i < recognizeResult.Results.Count; i++)
+                if ((combinedMask & EngineMode.Liveness) > 0)
                 {
-                    recognizeResult.Results[i].Age = Marshal.PtrToStructure<int>(recognizeResult.AgeInfo.AgeArray + Marshal.SizeOf<int>() * i);
+                    result = ArcFaceApi.GetLivenessScore(_engine, pLivenessInfo);
+                    CheckResult(result);
+                    recognizeResult.LivenessInfo = Marshal.PtrToStructure<LivenessInfo>(pLivenessInfo);
+                    if (recognizeResult.LivenessInfo.Num < 1)
+                        return recognizeResult;
+                    recognizeResult.Results[recognizeResult.MaxFaceIndex].Live = Marshal.PtrToStructure<int>(recognizeResult.LivenessInfo.IsLive);
                 }
+                if ((combinedMask & EngineMode.IrLiveness) > 0)
+                {
+                    result = ArcFaceApi.GetLivenessScoreIr(_engine, pLivenessInfo);
+                    CheckResult(result);
+                    recognizeResult.LivenessInfo = Marshal.PtrToStructure<LivenessInfo>(pLivenessInfo);
+                    if (recognizeResult.LivenessInfo.Num < 1)
+                        return recognizeResult;
+                    recognizeResult.Results[recognizeResult.MaxFaceIndex].Live = Marshal.PtrToStructure<int>(recognizeResult.LivenessInfo.IsLive);
+                }
+                if ((combinedMask & EngineMode.Age) > 0)
+                {
+                    result = ArcFaceApi.GetAge(_engine, pAgeInfo);
+                    CheckResult(result);
+                    recognizeResult.AgeInfo = Marshal.PtrToStructure<AgeInfo>(pAgeInfo);
+                    if (recognizeResult.AgeInfo.Num < 1)
+                        return recognizeResult;
+                    if (recognizeResult.AgeInfo.Num != recognizeResult.Results.Count)
+                        throw new Exception("检测年龄结果集与人脸数量不符");
+                    for (int i = 0; i < recognizeResult.AgeInfo.Num; i++)
+                    {
+                        recognizeResult.Results[i].Age =
+                            Marshal.PtrToStructure<int>(recognizeResult.AgeInfo.AgeArray + Marshal.SizeOf<int>() * i);
+                    }
+                }
+                if ((combinedMask & EngineMode.Gender) > 0)
+                {
+                    result = ArcFaceApi.GetGender(_engine, pGenderInfo);
+                    CheckResult(result);
+                    recognizeResult.GenderInfo = Marshal.PtrToStructure<GenderInfo>(pGenderInfo);
+                    if (recognizeResult.GenderInfo.Num < 1)
+                        return recognizeResult;
+                    if (recognizeResult.GenderInfo.Num != recognizeResult.Results.Count)
+                        throw new Exception("检测性别结果集与人脸数量不符");
+                    for (int i = 0; i < recognizeResult.GenderInfo.Num; i++)
+                    {
+                        recognizeResult.Results[i].Gender =
+                            Marshal.PtrToStructure<int>(recognizeResult.GenderInfo.GenderArray + Marshal.SizeOf<int>() * i);
+                    }
+                }
+                return recognizeResult;
             }
             catch (Exception e)
             {
                 Console.WriteLine(e);
                 throw;
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(pLivenessInfo);
+                Marshal.FreeHGlobal(pAgeInfo);
+                Marshal.FreeHGlobal(pGenderInfo);
             }
         }
 

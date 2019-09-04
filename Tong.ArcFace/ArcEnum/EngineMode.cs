@@ -1,8 +1,11 @@
-﻿namespace Tong.ArcFace.ArcEnum
+﻿using System;
+
+namespace Tong.ArcFace.ArcEnum
 {
     /// <summary>
     /// 引擎的工作模式
     /// </summary>
+    [Flags]
     public enum EngineMode
     {
         /// <summary>
@@ -42,7 +45,7 @@
         /// </summary>
         RgbAll = FaceDetect | FaceRecognition | Age | Gender | Face3DAngle | Liveness,
         /// <summary>
-        /// 全部
+        /// Ir全部
         /// </summary>
         IrAll = FaceDetect | FaceRecognition | Age | Gender | Face3DAngle | IrLiveness
     }
