@@ -75,7 +75,7 @@ namespace Tong.ArcFace
         /// <param name="faceFeature">人脸特征</param>
         /// <returns>调用结果</returns>
         [DllImport(DllPath, EntryPoint = "ASFFaceFeatureExtract", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int FaceFeatureExtract(IntPtr pEngine, int width, int height, int format, IntPtr imgData, IntPtr faceInfo, IntPtr faceFeature);
+        public static extern int FaceFeatureExtract(IntPtr pEngine, int width, int height, ImagePixelFormat format, IntPtr imgData, SingleFaceInfo faceInfo, out FaceFeature faceFeature);
 
         /// <summary>
         /// 人脸特征比对
@@ -95,7 +95,7 @@ namespace Tong.ArcFace
         /// <param name="ageInfo">检测到的年龄信息</param>
         /// <returns>调用结果</returns>
         [DllImport(DllPath, EntryPoint = "ASFGetAge", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int GetAge(IntPtr pEngine, IntPtr ageInfo);
+        public static extern int GetAge(IntPtr pEngine, out AgeInfo ageInfo);
 
         /// <summary>
         /// 获取性别信息
@@ -104,7 +104,7 @@ namespace Tong.ArcFace
         /// <param name="genderInfo">检测到的性别信息</param>
         /// <returns>调用结果</returns>
         [DllImport(DllPath, EntryPoint = "ASFGetGender", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int GetGender(IntPtr pEngine, IntPtr genderInfo);
+        public static extern int GetGender(IntPtr pEngine, out GenderInfo genderInfo);
 
         /// <summary>
         /// 获取3D角度信息
@@ -122,7 +122,7 @@ namespace Tong.ArcFace
         /// <param name="livenessInfo">活体检测信息</param>
         /// <returns>调用结果</returns>
         [DllImport(DllPath, EntryPoint = "ASFGetLivenessScore", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int GetLivenessScore(IntPtr hEngine, IntPtr livenessInfo);
+        public static extern int GetLivenessScore(IntPtr hEngine, out LivenessInfo livenessInfo);
 
         /// <summary>
         /// 该接口目前仅支持单人脸IR活体检测（不支持年龄、性别、3D角度的检测），默认取第一张人脸
@@ -142,10 +142,10 @@ namespace Tong.ArcFace
         /// 获取IR活体结果
         /// </summary>
         /// <param name="pEngine">引擎handle</param>
-        /// <param name="irLivenessInfo">检测到IR活体结果</param>
+        /// <param name="livenessInfo">检测到IR活体结果</param>
         /// <returns></returns>
         [DllImport(DllPath, EntryPoint = "ASFGetLivenessScore_IR", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int GetLivenessScoreIr(IntPtr pEngine, IntPtr irLivenessInfo);
+        public static extern int GetLivenessScoreIr(IntPtr pEngine, out LivenessInfo livenessInfo);
 
         /// <summary>
         /// 销毁引擎

@@ -4,6 +4,7 @@ using System;
 using System.Drawing;
 using System.Runtime.InteropServices;
 using Tong.ArcFace.ArcEnum;
+using Tong.ArcFace.Common;
 
 namespace Tong.ArcFace.Util
 {
@@ -165,11 +166,5 @@ namespace Tong.ArcFace.Util
         }
 
         #endregion
-    }
-
-    public enum CameraType
-    {
-        Bgr,
-        Ir
     }
 }

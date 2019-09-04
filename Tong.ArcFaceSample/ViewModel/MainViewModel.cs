@@ -169,6 +169,7 @@ namespace Tong.ArcFaceSample.ViewModel
             try
             {
                 var recognizeResult = Recognition.Instance.DetectFaceInfo(imageInfo, EngineMode.Liveness | EngineMode.Age | EngineMode.Gender);
+                Recognition.Instance.ExtractFeature(imageInfo, recognizeResult, 0);
                 GenerateFrameImg(imageInfo.Height, imageInfo.Width, recognizeResult);
             }
             catch (Exception ex)

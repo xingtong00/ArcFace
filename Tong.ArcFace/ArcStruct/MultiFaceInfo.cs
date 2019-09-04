@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.InteropServices;
 
 namespace Tong.ArcFace.ArcStruct
 {
@@ -26,5 +27,24 @@ namespace Tong.ArcFace.ArcStruct
         /// face ID，IMAGE模式下不返回FaceID
         /// </summary>
         public IntPtr FaceId { get; set; }
+
+        /// <summary>
+        /// 按照索引获取单个人脸信息
+        /// </summary>
+        /// <param name="index">索引</param>
+        /// <returns>人脸信息</returns>
+        public SingleFaceInfo GetSingleFaceInfo(int index)
+        {
+            SingleFaceInfo singleFaceInfo = new SingleFaceInfo();
+            singleFaceInfo.FaceRect = new FaceRect();
+            singleFaceInfo.FaceOrient = 1;
+            if (FaceNum == 0)
+                return singleFaceInfo;
+            if (0 > index && index > FaceNum)
+                return singleFaceInfo;
+            singleFaceInfo.FaceRect = Marshal.PtrToStructure<FaceRect>(FaceRects + Marshal.SizeOf<FaceRect>() * index);
+            singleFaceInfo.FaceOrient = Marshal.PtrToStructure<int>(FaceOrients + Marshal.SizeOf<int>() * index);
+            return singleFaceInfo;
+        }
     }
 }

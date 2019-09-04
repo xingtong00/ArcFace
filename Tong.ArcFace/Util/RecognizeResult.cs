@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using Tong.ArcFace.ArcStruct;
+using Tong.ArcFace.Common;
 
 namespace Tong.ArcFace.Util
 {
@@ -92,7 +93,7 @@ namespace Tong.ArcFace.Util
         /// 是否是真人 
         /// 0：非真人；1：真人；-1：不确定；-2:传入人脸数>1；
         /// </summary>
-        public int Live { get; set; }
+        public Liveness Live { get; set; }
 
         /// <summary>
         /// 年龄
@@ -102,6 +103,16 @@ namespace Tong.ArcFace.Util
         /// <summary>
         /// 0：男；1：女
         /// </summary>
-        public int Gender { get; set; }
+        public Gender Gender { get; set; }
+
+        /// <summary>
+        /// 人脸特征
+        /// </summary>
+        public FaceFeature FaceFeature { get; set; }
+
+        /// <summary>
+        /// 特征码
+        /// </summary>
+        public byte[] Feature { get; set; }
     }
 }
