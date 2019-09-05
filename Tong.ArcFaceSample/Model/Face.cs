@@ -15,6 +15,18 @@ namespace Tong.ArcFaceSample.Model
         /// </summary>
         public string Evaluation { get; set; }
 
+        /// <summary>
+        /// 分数
+        /// </summary>
+        public int Score { get; set; }
+
+        /// <summary>
+        /// 是否展示
+        /// </summary>
+        public bool IsShow { get; set; } = false;
+
+        public DateTime CreateAt { get; set; } = DateTime.Now;
+
         public Face(Result result)
         {
             FaceRect = result.FaceRect;

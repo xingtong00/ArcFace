@@ -4,13 +4,43 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Tong.ArcFaceSample"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         mc:Ignorable="d"
         AllowsTransparency="True"
         DataContext="{Binding Source={StaticResource Locator}, Path=Main}"
-        WindowStartupLocation="CenterScreen" WindowStyle="None"
+        WindowStartupLocation="CenterScreen" WindowStyle="None"  WindowState="{Binding State}"
         Title="MainWindow" Height="{Binding Height}" Width="{Binding Width}">
-    <Grid>
-        <Image Source="{Binding PreviewImage}" Stretch="Fill" />
-        <Image Source="{Binding DrawImage}" Stretch="Fill" />
-    </Grid>
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesignTheme.PopupBox.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+    <Border BorderBrush="Black" BorderThickness="1">
+        <Grid>
+            <Image Source="{Binding PreviewImage}" Stretch="Fill" />
+            <Image Source="{Binding DrawImage}" Stretch="Fill" />
+            <materialDesign:PopupBox Style="{StaticResource MaterialDesignMultiFloatingActionAccentPopupBox}"
+                                     PlacementMode="TopAndAlignCentres" ToolTip="操作" VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="0,0,10,10">
+                <materialDesign:PopupBox.ToggleCheckedContent>
+                    <materialDesign:PackIcon Kind="MenuOpen" Width="24" Height="24" />
+                </materialDesign:PopupBox.ToggleCheckedContent>
+                <StackPanel>
+                    <Button Command="{Binding ChangeWindow}" ToolTip="{Binding StateText}">
+                        <materialDesign:PackIcon
+                            Kind="WindowMaximize"
+                            Height="24"
+                            Width="24" />
+                    </Button>
+                    <Button Command="{Binding Close}" ToolTip="关闭程序">
+                        <materialDesign:PackIcon
+                            Kind="WindowClose"
+                            Height="24"
+                            Width="24" />
+                    </Button>
+                </StackPanel>
+            </materialDesign:PopupBox>
+        </Grid>
+    </Border>
 </Window>

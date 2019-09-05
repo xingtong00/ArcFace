@@ -1,18 +1,23 @@
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using Emgu.CV;
 using GalaSoft.MvvmLight;
+using GalaSoft.MvvmLight.Command;
 using GalaSoft.MvvmLight.Messaging;
+using log4net;
 using Tong.ArcFace;
 using Tong.ArcFace.ArcEnum;
 using Tong.ArcFace.ArcStruct;
@@ -80,6 +85,30 @@ namespace Tong.ArcFaceSample.ViewModel
             }
         }
 
+        private WindowState _state = WindowState.Normal;
+
+        public WindowState State
+        {
+            get { return _state; }
+            set
+            {
+                _state = value;
+                RaisePropertyChanged("State");
+            }
+        }
+
+        private string _stateText = "最大化";
+
+        public string StateText
+        {
+            get { return _stateText; }
+            set
+            {
+                _stateText = value;
+                RaisePropertyChanged("StateText");
+            }
+        }
+
         #endregion
 
         #region 字段
@@ -97,13 +126,78 @@ namespace Tong.ArcFaceSample.ViewModel
         /// </summary>
         private int _maxTrackFaceNum = 5;
 
-        private readonly List<Face> _features = new List<Face>();
-
         #endregion
 
         #region 线程
 
         private Thread _recognitionThread;
+
+        #endregion
+
+        private readonly ILog _logError = LogManager.GetLogger("logerror");
+
+        private readonly List<Face> _faces = new List<Face>();
+
+        private readonly List<string> _evaluations;
+
+        #endregion
+
+        #region 命令
+
+        #region 关闭
+
+        private ICommand close;
+
+        public ICommand Close
+        {
+            get
+            {
+                if (close == null)
+                    close = new RelayCommand(() =>
+                    {
+                        try
+                        {
+                            _capture.Stop();
+                            _recognitionThread.Abort();
+                            ArcFaceApi.UninitEngine(Recognition.Instance.Engine);
+                            Application.Current.Shutdown();
+                        }
+                        catch (Exception e)
+                        {
+                            _logError.Error(e.Message, e);
+                        }
+                    });
+                return close;
+            }
+        }
+
+        #endregion
+
+        #region 窗口操作
+
+        private ICommand changeWindow;
+
+        public ICommand ChangeWindow
+        {
+            get
+            {
+                if (changeWindow == null)
+                    changeWindow = new RelayCommand(() =>
+                    {
+                        if (State == WindowState.Normal)
+                        {
+                            State = WindowState.Maximized;
+                            StateText = "窗口化";
+                        }
+                        else
+                        {
+                            State = WindowState.Normal;
+                            StateText = "最大化";
+                        }
+                    });
+                return changeWindow;
+            }
+        }
 
         #endregion
 
@@ -113,6 +207,7 @@ namespace Tong.ArcFaceSample.ViewModel
 
         public MainViewModel()
         {
+            _evaluations = ConfigurationManager.AppSettings["Evaluation"].Split(';').ToList();
             _capture = new VideoCapture
             {
                 FlipHorizontal = true
@@ -156,9 +251,9 @@ namespace Tong.ArcFaceSample.ViewModel
                 {
                     return;
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
-                    // ignored
+                    _logError.Error(e.Message, e);
                 }
             }
         }
@@ -171,22 +266,44 @@ namespace Tong.ArcFaceSample.ViewModel
         {
             try
             {
-                var recognizeResult = Recognition.Instance.DetectFaceInfo(imageInfo, EngineMode.Liveness | EngineMode.Age | EngineMode.Gender);
-                Recognition.Instance.ExtractFeature(imageInfo, recognizeResult, 0);
+                var recognizeResult = Recognition.Instance.DetectFaces(imageInfo);
+                for (int i = 0; i < recognizeResult.Results.Count; i++)
+                {
+                    Recognition.Instance.ExtractFeature(imageInfo, recognizeResult, i);
+                }
+                _faces.ForEach(x => x.IsShow = false);
                 foreach (var result in recognizeResult.Results)
                 {
-                    if (_features.All(x => x.FaceFeature.Feature != result.FaceFeature.Feature))
+                    var face = _faces.FirstOrDefault(x =>
                     {
-                        Face face = new Face(result);
-                        face.Evaluation = "12312";
-                        _features.Add(face);
+                        var r = ArcFaceApi.FaceFeatureCompare(Recognition.Instance.Engine, x.FaceFeature,
+                            result.FaceFeature, out var similarity);
+                        if (r != 0)
+                            return false;
+                        if (similarity > 0.8)
+                            return true;
+                        return false;
+                    });
+                    if (face == null)
+                    {
+                        Face temp = new Face(result);
+                        Random random = new Random();
+                        temp.Evaluation = _evaluations[random.Next(0, _evaluations.Count - 1)];
+                        temp.Score = random.Next(80, 100);
+                        temp.IsShow = true;
+                        _faces.Add(temp);
+                    }
+                    else
+                    {
+                        face.FaceRect = result.FaceRect;
+                        face.IsShow = true;
                     }
                 }
-                GenerateFrameImg(imageInfo.Height, imageInfo.Width, recognizeResult);
+                GenerateFrameImg(imageInfo.Height, imageInfo.Width);
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                // ignored
+                _logError.Error(e.Message, e);
             }
         }
 
@@ -195,39 +312,54 @@ namespace Tong.ArcFaceSample.ViewModel
         /// </summary>
         /// <param name="imgHeight">图片高度</param>
         /// <param name="imgWidth">图片宽度</param>
-        /// <param name="recognizeResult">人脸位置信息</param>
-        private void GenerateFrameImg(int imgHeight, int imgWidth, RecognizeResult recognizeResult)
+        private void GenerateFrameImg(int imgHeight, int imgWidth)
         {
             DrawingVisual drawingVisual = new DrawingVisual();
             using (DrawingContext drawingContext = drawingVisual.RenderOpen())
             {
-                Pen pen1 = new Pen(Brushes.Gold, 1);
-                Pen pen2 = new Pen(Brushes.LightBlue, 3);
-
-                for (int i = 0; i < recognizeResult.Results.Count; i++)
+                for (int i = 0; i < _faces.Count; i++)
                 {
-                    Rectangle rect = recognizeResult.Results[i].FaceRect.Rectangle;
-                    var width = rect.Width / 4;
-                    //左上上
-                    drawingContext.DrawLine(pen2, new Point(rect.Left, rect.Top), new Point(rect.Left + width, rect.Top));
-                    //左上下
-                    drawingContext.DrawLine(pen2, new Point(rect.Left, rect.Top), new Point(rect.Left, rect.Top + width));
-                    //右上上
-                    drawingContext.DrawLine(pen2, new Point(rect.Right, rect.Top), new Point(rect.Right - width, rect.Top));
-                    //右上下
-                    drawingContext.DrawLine(pen2, new Point(rect.Right, rect.Top), new Point(rect.Right, rect.Top + width));
-                    //左下下
-                    drawingContext.DrawLine(pen2, new Point(rect.Left, rect.Bottom), new Point(rect.Left + width, rect.Bottom));
-                    //左下上
-                    drawingContext.DrawLine(pen2, new Point(rect.Left, rect.Bottom), new Point(rect.Left, rect.Bottom - width));
-                    //右下下
-                    drawingContext.DrawLine(pen2, new Point(rect.Right, rect.Bottom), new Point(rect.Right - width, rect.Bottom));
-                    //右下上
-                    drawingContext.DrawLine(pen2, new Point(rect.Right, rect.Bottom), new Point(rect.Right, rect.Bottom - width));
+                    if (!_faces[i].IsShow)
+                        continue;
+                    Rectangle rect = _faces[i].FaceRect.Rectangle;
+                    var width = rect.Width * 0.75;
+                    ////左上上
+                    //drawingContext.DrawLine(pen2, new Point(rect.Left, rect.Top), new Point(rect.Left + width, rect.Top));
+                    ////左上下
+                    //drawingContext.DrawLine(pen2, new Point(rect.Left, rect.Top), new Point(rect.Left, rect.Top + width));
+                    ////右上上
+                    //drawingContext.DrawLine(pen2, new Point(rect.Right, rect.Top), new Point(rect.Right - width, rect.Top));
+                    ////右上下
+                    //drawingContext.DrawLine(pen2, new Point(rect.Right, rect.Top), new Point(rect.Right, rect.Top + width));
+                    ////左下下
+                    //drawingContext.DrawLine(pen2, new Point(rect.Left, rect.Bottom), new Point(rect.Left + width, rect.Bottom));
+                    ////左下上
+                    //drawingContext.DrawLine(pen2, new Point(rect.Left, rect.Bottom), new Point(rect.Left, rect.Bottom - width));
+                    ////右下下
+                    //drawingContext.DrawLine(pen2, new Point(rect.Right, rect.Bottom), new Point(rect.Right - width, rect.Bottom));
+                    ////右下上
+                    //drawingContext.DrawLine(pen2, new Point(rect.Right, rect.Bottom), new Point(rect.Right, rect.Bottom - width));
 
-                    Rect prompt = new Rect(new Point(rect.Left, rect.Top - (rect.Height * 0.75)), new System.Windows.Size(rect.Width, rect.Height));
+                    Rect prompt = new Rect(new Point(rect.Left, rect.Top - (rect.Height * 0.75)), new System.Windows.Size(width, width * 0.6));
                     ImageSource img = new BitmapImage(new Uri("Image/prompt.png", UriKind.Relative));
                     drawingContext.DrawImage(img, prompt);
+                    FormattedText score = new FormattedText(
+                        _faces[i].Score.ToString(),
+                        CultureInfo.GetCultureInfo("zh-cn"),
+                        FlowDirection.LeftToRight,
+                        new Typeface("Verdana"),
+                        rect.Width * 0.12,
+                        Brushes.Black);
+                    FormattedText evaluation = new FormattedText(
+                        _faces[i].Evaluation,
+                        CultureInfo.GetCultureInfo("zh-cn"),
+                        FlowDirection.LeftToRight,
+                        new Typeface("Verdana"),
+                        rect.Width * 0.07,
+                        Brushes.Black);
+                    evaluation.MaxTextWidth = width - (rect.Width * 0.06);
+                    drawingContext.DrawText(score, new Point(rect.Left + (rect.Width * 0.19), rect.Top - (rect.Height * 0.81)));
+                    drawingContext.DrawText(evaluation, new Point(rect.Left + (rect.Width * 0.03), rect.Top - (rect.Height * 0.65)));
                 }
             }
             RenderTargetBitmap rtbitmap = new RenderTargetBitmap(imgWidth, imgHeight, 0.0, 0.0, PixelFormats.Default);
