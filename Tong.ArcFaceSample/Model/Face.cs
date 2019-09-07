@@ -1,9 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Tong.ArcFace.ArcStruct;
 using Tong.ArcFace.Util;
 
 namespace Tong.ArcFaceSample.Model
@@ -11,14 +6,9 @@ namespace Tong.ArcFaceSample.Model
     public class Face : Result
     {
         /// <summary>
-        /// 评价
+        /// 路径
         /// </summary>
-        public string Evaluation { get; set; }
-
-        /// <summary>
-        /// 分数
-        /// </summary>
-        public int Score { get; set; }
+        public string Path { get; set; }
 
         /// <summary>
         /// 是否展示
@@ -26,6 +16,17 @@ namespace Tong.ArcFaceSample.Model
         public bool IsShow { get; set; } = false;
 
         public DateTime CreateAt { get; set; } = DateTime.Now;
+
+        public bool IsAnalysis
+        {
+            get
+            {
+                var temp = DateTime.Now - CreateAt;
+                if (temp.Seconds > 5)
+                    return false;
+                return true;
+            }
+        }
 
         public Face(Result result)
         {

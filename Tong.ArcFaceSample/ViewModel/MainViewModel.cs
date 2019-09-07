@@ -6,27 +6,19 @@ using System.Drawing.Imaging;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
 using Emgu.CV;
 using GalaSoft.MvvmLight;
 using GalaSoft.MvvmLight.Command;
-using GalaSoft.MvvmLight.Messaging;
 using log4net;
 using Tong.ArcFace;
-using Tong.ArcFace.ArcEnum;
-using Tong.ArcFace.ArcStruct;
 using Tong.ArcFace.Util;
 using Tong.ArcFaceSample.Model;
-using Tong.ArcFaceSample.Properties;
 using Brushes = System.Windows.Media.Brushes;
-using Pen = System.Windows.Media.Pen;
-using PixelFormat = System.Drawing.Imaging.PixelFormat;
 using Point = System.Windows.Point;
 using Rectangle = System.Drawing.Rectangle;
 
@@ -138,7 +130,7 @@ namespace Tong.ArcFaceSample.ViewModel
 
         private readonly List<Face> _faces = new List<Face>();
 
-        private readonly List<string> _evaluations;
+        private readonly List<string> _paths = new List<string>();
 
         #endregion
 
@@ -207,7 +199,13 @@ namespace Tong.ArcFaceSample.ViewModel
 
         public MainViewModel()
         {
-            _evaluations = ConfigurationManager.AppSettings["Evaluation"].Split(';').ToList();
+            var imagePath = new DirectoryInfo(Directory.GetCurrentDirectory() + "\\Image\\");
+            foreach (var file in imagePath.GetFiles())
+            {
+                if (file.Name.Contains("analysis.png"))
+                    continue;
+                _paths.Add("Image/" + file.Name);
+            }
             _capture = new VideoCapture
             {
                 FlipHorizontal = true
@@ -288,8 +286,7 @@ namespace Tong.ArcFaceSample.ViewModel
                     {
                         Face temp = new Face(result);
                         Random random = new Random();
-                        temp.Evaluation = _evaluations[random.Next(0, _evaluations.Count - 1)];
-                        temp.Score = random.Next(80, 100);
+                        temp.Path = _paths[random.Next(0, _paths.Count - 1)];
                         temp.IsShow = true;
                         _faces.Add(temp);
                     }
@@ -340,26 +337,9 @@ namespace Tong.ArcFaceSample.ViewModel
                     ////сробио
                     //drawingContext.DrawLine(pen2, new Point(rect.Right, rect.Bottom), new Point(rect.Right, rect.Bottom - width));
 
-                    Rect prompt = new Rect(new Point(rect.Left, rect.Top - (rect.Height * 0.75)), new System.Windows.Size(width, width * 0.6));
-                    ImageSource img = new BitmapImage(new Uri("Image/prompt.png", UriKind.Relative));
+                    Rect prompt = new Rect(new Point(rect.Left * 1.2, rect.Top - (rect.Height * 0.75)), new System.Windows.Size(width, width * 0.6));
+                    ImageSource img = new BitmapImage(new Uri(_faces[i].IsAnalysis ? "Image/analysis.png" : _faces[i].Path, UriKind.Relative));
                     drawingContext.DrawImage(img, prompt);
-                    FormattedText score = new FormattedText(
-                        _faces[i].Score.ToString(),
-                        CultureInfo.GetCultureInfo("zh-cn"),
-                        FlowDirection.LeftToRight,
-                        new Typeface("Verdana"),
-                        rect.Width * 0.12,
-                        Brushes.Black);
-                    FormattedText evaluation = new FormattedText(
-                        _faces[i].Evaluation,
-                        CultureInfo.GetCultureInfo("zh-cn"),
-                        FlowDirection.LeftToRight,
-                        new Typeface("Verdana"),
-                        rect.Width * 0.07,
-                        Brushes.Black);
-                    evaluation.MaxTextWidth = width - (rect.Width * 0.06);
-                    drawingContext.DrawText(score, new Point(rect.Left + (rect.Width * 0.19), rect.Top - (rect.Height * 0.81)));
-                    drawingContext.DrawText(evaluation, new Point(rect.Left + (rect.Width * 0.03), rect.Top - (rect.Height * 0.65)));
                 }
             }
             RenderTargetBitmap rtbitmap = new RenderTargetBitmap(imgWidth, imgHeight, 0.0, 0.0, PixelFormats.Default);

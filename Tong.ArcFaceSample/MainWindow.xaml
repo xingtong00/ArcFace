@@ -17,7 +17,7 @@
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Window.Resources>
-    <Border BorderBrush="Black" BorderThickness="1">
+    <Border CornerRadius="3" BorderBrush="Black" BorderThickness="5">
         <Grid>
             <Image Source="{Binding PreviewImage}" Stretch="Fill" />
             <Image Source="{Binding DrawImage}" Stretch="Fill" />

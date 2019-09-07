@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Drawing;
-using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
 using Tong.ArcFace.ArcEnum;
 using Tong.ArcFace.ArcStruct;
 using Tong.ArcFace.Common;
@@ -128,8 +125,8 @@ namespace Tong.ArcFace
             {
                 var result = cameraType == CameraType.Bgr
                     ? ArcFaceApi.Process(_engine, imageInfo.Width, imageInfo.Height, imageInfo.Format,
-                    imageInfo.ImageData, recognizeResult.MultiFaceInfo,EngineMode.Liveness)
-                    : ArcFaceApi.ProcessIr(_engine, imageInfo.Width, imageInfo.Height, imageInfo.Format, 
+                    imageInfo.ImageData, recognizeResult.MultiFaceInfo, EngineMode.Liveness)
+                    : ArcFaceApi.ProcessIr(_engine, imageInfo.Width, imageInfo.Height, imageInfo.Format,
                     imageInfo.ImageData, recognizeResult.MultiFaceInfo, EngineMode.IrLiveness);
                 CheckResult(result);
                 LivenessInfo livenessInfo;
@@ -154,9 +151,6 @@ namespace Tong.ArcFace
 
         /// <summary>
         /// 检测多种属性
-        /// <para>
-        /// 需要先执行人脸检测
-        /// </para>
         /// </summary>
         /// <param name="imageInfo">图像</param>
         /// <param name="combinedMask">需要检测的组合</param>
@@ -225,10 +219,11 @@ namespace Tong.ArcFace
         /// <param name="imageInfo">图像</param>
         /// <param name="recognizeResult">人脸检测的结果</param>
         /// <param name="index">需提取人脸的索引</param>
+        /// <param name="cameraType">相机类型</param>
         /// <returns>特征码</returns>
-        public void ExtractFeature(ImageInfo imageInfo, RecognizeResult recognizeResult, int index)
+        public void ExtractFeature(ImageInfo imageInfo, RecognizeResult recognizeResult, int index, CameraType cameraType = CameraType.Bgr)
         {
-            if (recognizeResult.MultiFaceInfo.FaceNum == 0 || (index < 0 && recognizeResult.MultiFaceInfo.FaceNum < index ))
+            if (recognizeResult.MultiFaceInfo.FaceNum == 0 || (index < 0 && recognizeResult.MultiFaceInfo.FaceNum < index))
                 throw new Exception("索引错误");
             SingleFaceInfo singleFaceInfo = recognizeResult.MultiFaceInfo.GetSingleFaceInfo(index);
             try
@@ -236,9 +231,15 @@ namespace Tong.ArcFace
                 var result = ArcFaceApi.FaceFeatureExtract(_engine, imageInfo.Width, imageInfo.Height, imageInfo.Format,
                     imageInfo.ImageData, singleFaceInfo, out var feature);
                 CheckResult(result);
-                recognizeResult.Results[index].FaceFeature = feature;
                 recognizeResult.Results[index].Feature = new byte[feature.FeatureSize];
                 Marshal.Copy(feature.Feature, recognizeResult.Results[index].Feature, 0, feature.FeatureSize);
+
+                FaceFeature localFeature = new FaceFeature();
+                localFeature.Feature = Marshal.AllocHGlobal(recognizeResult.Results[index].Feature.Length);
+                Marshal.Copy(recognizeResult.Results[index].Feature, 0, localFeature.Feature, recognizeResult.Results[index].Feature.Length);
+                localFeature.FeatureSize = recognizeResult.Results[index].Feature.Length;
+
+                recognizeResult.Results[index].FaceFeature = localFeature;
             }
             catch (Exception e)
             {
@@ -251,7 +252,7 @@ namespace Tong.ArcFace
         /// 检查结果
         /// </summary>
         /// <param name="result">结果</param>
-        private void CheckResult(int result)
+        public static void CheckResult(int result)
         {
             if (result != 0)
             {
