@@ -132,6 +132,14 @@ namespace Tong.ArcFaceSample.ViewModel
 
         private readonly List<string> _paths = new List<string>();
 
+        private readonly double _qualifiedSimilarity;
+        private readonly double _promptLeft;
+        private readonly double _promptTop;
+        private readonly double _promptWidth;
+        private readonly double _promptHeight;
+        private readonly int _analysisTime;
+        private readonly Rectangle _recognitionRectangle;
+
         #endregion
 
         #region 命令
@@ -199,6 +207,27 @@ namespace Tong.ArcFaceSample.ViewModel
 
         public MainViewModel()
         {
+            int margin;
+            try
+            {
+                _qualifiedSimilarity = Convert.ToDouble(ConfigurationManager.AppSettings["similarity"]) / 100;
+                _promptLeft = Convert.ToDouble(ConfigurationManager.AppSettings["promptLeft"]);
+                _promptTop = Convert.ToDouble(ConfigurationManager.AppSettings["promptTop"]);
+                _promptWidth = Convert.ToDouble(ConfigurationManager.AppSettings["promptWidth"]);
+                _promptHeight = Convert.ToDouble(ConfigurationManager.AppSettings["promptHeight"]);
+                _analysisTime = Convert.ToInt32(ConfigurationManager.AppSettings["analysisTime"]);
+                margin = Convert.ToInt32(ConfigurationManager.AppSettings["margin"]);
+            }
+            catch (Exception)
+            {
+                _qualifiedSimilarity = 0.8;
+                _promptLeft = 1.2;
+                _promptTop = 0.75;
+                _promptWidth = 0.75;
+                _promptHeight = 0.75;
+                _analysisTime = 5;
+                margin = 20;
+            }
             var imagePath = new DirectoryInfo(Directory.GetCurrentDirectory() + "\\Image\\");
             foreach (var file in imagePath.GetFiles())
             {
@@ -210,6 +239,7 @@ namespace Tong.ArcFaceSample.ViewModel
             {
                 FlipHorizontal = true
             };
+            _recognitionRectangle = new Rectangle(margin, margin, _capture.Height - 2 * margin, _capture.Width - 2 * margin);
             _capture.ImageGrabbed += CaptureOnImageGrabbed;
             _capture.Start();
             Recognition.Instance.Activation("5ukkmpE1D3wHuPer5Swy5SqmfvqeHMD3vhfACPVsrAyY", "2Yc39UJGj7sM6PoBs24iNmuWFwxxhy7t6mZrafLNUZEz");
@@ -272,13 +302,17 @@ namespace Tong.ArcFaceSample.ViewModel
                 _faces.ForEach(x => x.IsShow = false);
                 foreach (var result in recognizeResult.Results)
                 {
+                    if (!_recognitionRectangle.Contains(result.FaceRect.Rectangle))
+                    {
+                        continue;
+                    }
                     var face = _faces.FirstOrDefault(x =>
                     {
                         var r = ArcFaceApi.FaceFeatureCompare(Recognition.Instance.Engine, x.FaceFeature,
                             result.FaceFeature, out var similarity);
                         if (r != 0)
                             return false;
-                        if (similarity > 0.8)
+                        if (similarity > _qualifiedSimilarity)
                             return true;
                         return false;
                     });
@@ -288,6 +322,7 @@ namespace Tong.ArcFaceSample.ViewModel
                         Random random = new Random();
                         temp.Path = _paths[random.Next(0, _paths.Count - 1)];
                         temp.IsShow = true;
+                        temp.AnalysisTime = _analysisTime;
                         _faces.Add(temp);
                     }
                     else
@@ -319,7 +354,6 @@ namespace Tong.ArcFaceSample.ViewModel
                     if (!_faces[i].IsShow)
                         continue;
                     Rectangle rect = _faces[i].FaceRect.Rectangle;
-                    var width = rect.Width * 0.75;
                     ////左上上
                     //drawingContext.DrawLine(pen2, new Point(rect.Left, rect.Top), new Point(rect.Left + width, rect.Top));
                     ////左上下
@@ -337,7 +371,7 @@ namespace Tong.ArcFaceSample.ViewModel
                     ////右下上
                     //drawingContext.DrawLine(pen2, new Point(rect.Right, rect.Bottom), new Point(rect.Right, rect.Bottom - width));
 
-                    Rect prompt = new Rect(new Point(rect.Left * 1.2, rect.Top - (rect.Height * 0.75)), new System.Windows.Size(width, width * 0.6));
+                    Rect prompt = new Rect(new Point(rect.Left * _promptLeft, rect.Top - (rect.Height * _promptTop)), new System.Windows.Size(rect.Width * _promptWidth, rect.Height * _promptHeight));
                     ImageSource img = new BitmapImage(new Uri(_faces[i].IsAnalysis ? "Image/analysis.png" : _faces[i].Path, UriKind.Relative));
                     drawingContext.DrawImage(img, prompt);
                 }

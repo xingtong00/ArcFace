@@ -17,12 +17,14 @@ namespace Tong.ArcFaceSample.Model
 
         public DateTime CreateAt { get; set; } = DateTime.Now;
 
+        public int AnalysisTime { get; set; } = 5;
+
         public bool IsAnalysis
         {
             get
             {
                 var temp = DateTime.Now - CreateAt;
-                if (temp.Seconds > 5)
+                if (temp.Seconds > AnalysisTime)
                     return false;
                 return true;
             }
