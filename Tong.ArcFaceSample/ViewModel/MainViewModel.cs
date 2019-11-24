@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.Drawing;
 using System.Drawing.Imaging;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -12,13 +11,13 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Emgu.CV;
+using Emgu.CV.CvEnum;
 using GalaSoft.MvvmLight;
 using GalaSoft.MvvmLight.Command;
 using log4net;
 using Tong.ArcFace;
 using Tong.ArcFace.Util;
 using Tong.ArcFaceSample.Model;
-using Brushes = System.Windows.Media.Brushes;
 using Point = System.Windows.Point;
 using Rectangle = System.Drawing.Rectangle;
 
@@ -132,9 +131,7 @@ namespace Tong.ArcFaceSample.ViewModel
 
         private readonly List<string> _paths = new List<string>();
 
-        private readonly double _qualifiedSimilarity;
-        private readonly double _promptLeft;
-        private readonly double _promptTop;
+        private readonly double _minRecognitionRectangle;
         private readonly double _promptWidth;
         private readonly double _promptHeight;
         private readonly int _analysisTime;
@@ -207,12 +204,14 @@ namespace Tong.ArcFaceSample.ViewModel
 
         public MainViewModel()
         {
+            double frameWidth;
+            double frameHeight;
             int margin;
             try
             {
-                _qualifiedSimilarity = Convert.ToDouble(ConfigurationManager.AppSettings["similarity"]) / 100;
-                _promptLeft = Convert.ToDouble(ConfigurationManager.AppSettings["promptLeft"]);
-                _promptTop = Convert.ToDouble(ConfigurationManager.AppSettings["promptTop"]);
+                _minRecognitionRectangle = Convert.ToDouble(ConfigurationManager.AppSettings["minRecognitionRectangle"]);
+                frameHeight = Convert.ToDouble(ConfigurationManager.AppSettings["frameHeight"]);
+                frameWidth = Convert.ToDouble(ConfigurationManager.AppSettings["frameWidth"]);
                 _promptWidth = Convert.ToDouble(ConfigurationManager.AppSettings["promptWidth"]);
                 _promptHeight = Convert.ToDouble(ConfigurationManager.AppSettings["promptHeight"]);
                 _analysisTime = Convert.ToInt32(ConfigurationManager.AppSettings["analysisTime"]);
@@ -220,11 +219,11 @@ namespace Tong.ArcFaceSample.ViewModel
             }
             catch (Exception)
             {
-                _qualifiedSimilarity = 0.8;
-                _promptLeft = 1.2;
-                _promptTop = 0.75;
-                _promptWidth = 0.75;
-                _promptHeight = 0.75;
+                _minRecognitionRectangle = 50;
+                frameHeight = 480;
+                frameWidth = 640;
+                _promptWidth = 75;
+                _promptHeight = 75;
                 _analysisTime = 5;
                 margin = 20;
             }
@@ -239,6 +238,8 @@ namespace Tong.ArcFaceSample.ViewModel
             {
                 FlipHorizontal = true
             };
+            _capture.SetCaptureProperty(CapProp.FrameHeight, frameHeight);
+            _capture.SetCaptureProperty(CapProp.FrameWidth, frameWidth);
             _recognitionRectangle = new Rectangle(margin, margin, _capture.Height - 2 * margin, _capture.Width - 2 * margin);
             _capture.ImageGrabbed += CaptureOnImageGrabbed;
             _capture.Start();
@@ -295,42 +296,38 @@ namespace Tong.ArcFaceSample.ViewModel
             try
             {
                 var recognizeResult = Recognition.Instance.DetectFaces(imageInfo);
-                for (int i = 0; i < recognizeResult.Results.Count; i++)
-                {
-                    Recognition.Instance.ExtractFeature(imageInfo, recognizeResult, i);
-                }
-                _faces.ForEach(x => x.IsShow = false);
+                List<Face> faces = new List<Face>();
                 foreach (var result in recognizeResult.Results)
                 {
                     if (!_recognitionRectangle.Contains(result.FaceRect.Rectangle))
+                        break;
+                    if (result.FaceRect.Rectangle.Width < _minRecognitionRectangle)
+                        break;
+
+                    Face temp = new Face(result);
+                    Random random = new Random();
+                    temp.Path = _paths[random.Next(0, _paths.Count - 1)];
+                    temp.AnalysisTime = _analysisTime;
+                    for (var i = 0; i < _faces.Count; i++)
                     {
-                        continue;
+                        var face = _faces[i];
+                        Rectangle intersection =
+                            Rectangle.Intersect(result.FaceRect.Rectangle, face.FaceRect.Rectangle);
+                        if (intersection.IsEmpty)
+                            continue;
+                        double maxWidth = face.FaceRect.Rectangle.Width;
+                        double minWidth = face.FaceRect.Rectangle.Width * 0.5;
+                        if (maxWidth >= face.FaceRect.Rectangle.Width && face.FaceRect.Rectangle.Width > minWidth)
+                        {
+                            temp.Path = face.Path;
+                            temp.CreateAt = face.CreateAt;
+                            break;
+                        }
                     }
-                    var face = _faces.FirstOrDefault(x =>
-                    {
-                        var r = ArcFaceApi.FaceFeatureCompare(Recognition.Instance.Engine, x.FaceFeature,
-                            result.FaceFeature, out var similarity);
-                        if (r != 0)
-                            return false;
-                        if (similarity > _qualifiedSimilarity)
-                            return true;
-                        return false;
-                    });
-                    if (face == null)
-                    {
-                        Face temp = new Face(result);
-                        Random random = new Random();
-                        temp.Path = _paths[random.Next(0, _paths.Count - 1)];
-                        temp.IsShow = true;
-                        temp.AnalysisTime = _analysisTime;
-                        _faces.Add(temp);
-                    }
-                    else
-                    {
-                        face.FaceRect = result.FaceRect;
-                        face.IsShow = true;
-                    }
+                    faces.Add(temp);
                 }
+                _faces.Clear();
+                _faces.AddRange(faces);
                 GenerateFrameImg(imageInfo.Height, imageInfo.Width);
             }
             catch (Exception e)
@@ -351,8 +348,6 @@ namespace Tong.ArcFaceSample.ViewModel
             {
                 for (int i = 0; i < _faces.Count; i++)
                 {
-                    if (!_faces[i].IsShow)
-                        continue;
                     Rectangle rect = _faces[i].FaceRect.Rectangle;
                     ////左上上
                     //drawingContext.DrawLine(pen2, new Point(rect.Left, rect.Top), new Point(rect.Left + width, rect.Top));
@@ -371,8 +366,10 @@ namespace Tong.ArcFaceSample.ViewModel
                     ////右下上
                     //drawingContext.DrawLine(pen2, new Point(rect.Right, rect.Bottom), new Point(rect.Right, rect.Bottom - width));
 
-                    Rect prompt = new Rect(new Point(rect.Left * _promptLeft, rect.Top - (rect.Height * _promptTop)), new System.Windows.Size(rect.Width * _promptWidth, rect.Height * _promptHeight));
-                    ImageSource img = new BitmapImage(new Uri(_faces[i].IsAnalysis ? "Image/analysis.png" : _faces[i].Path, UriKind.Relative));
+                    Rect prompt = new Rect(new Point(rect.Left + rect.Width /2 - _promptWidth / 2, rect.Top - (_promptHeight)), new System.Windows.Size(_promptWidth, _promptHeight));
+                    if (_faces[i].IsAnalysis)
+                        continue;
+                    ImageSource img = new BitmapImage(new Uri(_faces[i].Path, UriKind.Relative));
                     drawingContext.DrawImage(img, prompt);
                 }
             }
