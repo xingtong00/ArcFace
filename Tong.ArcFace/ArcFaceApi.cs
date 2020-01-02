@@ -10,8 +10,7 @@ namespace Tong.ArcFace
         /// <summary>
         /// SDK动态链接库路径
         /// </summary>
-        public const string DllPath = "Libs\\x64\\libarcsoft_face_engine.dll";
-
+        public const string DllPath = "libarcsoft_face_engine.dll";
 
         /// <summary>
         /// 激活人脸识别SDK引擎函数
@@ -47,6 +46,19 @@ namespace Tong.ArcFace
         /// <returns>调用结果</returns>
         [DllImport(DllPath, EntryPoint = "ASFDetectFaces", CallingConvention = CallingConvention.Cdecl)]
         public static extern int DetectFaces(IntPtr engine, int width, int height, ImagePixelFormat format, IntPtr imgData, out MultiFaceInfo detectedFaces);
+
+        /// <summary>
+        /// 人脸检测
+        /// </summary>
+        /// <param name="engine">引擎handle</param>
+        /// <param name="width">图像宽度</param>
+        /// <param name="height">图像高度</param>
+        /// <param name="format">图像颜色空间</param>
+        /// <param name="imgData">图像数据</param>
+        /// <param name="detectedFaces">人脸检测结果</param>
+        /// <returns>调用结果</returns>
+        [DllImport(DllPath, EntryPoint = "ASFDetectFacesEx", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int DetectFacesEx(IntPtr engine, IntPtr imgData, out MultiFaceInfo detectedFaces);
 
         /// <summary>
         /// 人脸信息检测（年龄/性别/人脸3D角度）

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Drawing;
 using System.Runtime.InteropServices;
 using Tong.ArcFace.ArcEnum;
 using Tong.ArcFace.ArcStruct;
@@ -15,8 +14,10 @@ namespace Tong.ArcFace
 
         private Recognition()
         {
-
+            var dllPath = Environment.Is64BitOperatingSystem ? "Libs\\x64\\" : "Libs\\x86\\";
+            SetDllDirectory(dllPath);
         }
+
 
         private static readonly Lazy<Recognition> instance = new Lazy<Recognition>(() => new Recognition());
 
@@ -27,6 +28,9 @@ namespace Tong.ArcFace
                 return instance.Value;
             }
         }
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        private static extern bool SetDllDirectory(string path);
 
         #endregion
 

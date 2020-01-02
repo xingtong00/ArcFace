@@ -55,18 +55,22 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ArcEnum\CompareModel.cs" />
+    <Compile Include="ArcEnum\DetectModel.cs" />
     <Compile Include="ArcEnum\EngineMode.cs" />
     <Compile Include="ArcEnum\ImagePixelFormat.cs" />
     <Compile Include="ArcEnum\OrientCode.cs" />
     <Compile Include="ArcEnum\OrientPriority.cs" />
     <Compile Include="ArcFaceApi.cs" />
+    <Compile Include="ArcStruct\ActiveFileInfo.cs" />
     <Compile Include="ArcStruct\AgeInfo.cs" />
-    <Compile Include="ArcStruct\DetectionMode.cs" />
+    <Compile Include="ArcEnum\DetectionMode.cs" />
     <Compile Include="ArcStruct\Face3DAngle.cs" />
     <Compile Include="ArcStruct\FaceFeature.cs" />
     <Compile Include="ArcStruct\FaceRect.cs" />
     <Compile Include="ArcStruct\GenderInfo.cs" />
     <Compile Include="ArcStruct\LivenessInfo.cs" />
+    <Compile Include="ArcStruct\LivenessThreshold.cs" />
     <Compile Include="ArcStruct\MultiFaceInfo.cs" />
     <Compile Include="ArcStruct\SdkVersion.cs" />
     <Compile Include="ArcStruct\SingleFaceInfo.cs" />
@@ -92,11 +96,14 @@
     <Content Include="Libs\x64\libarcsoft_face_engine.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="Libs\x86\libarcsoft_face.dll" />
+    <Content Include="Libs\x86\libarcsoft_face_engine.dll" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Libs\x64\libarcsoft_face_engine.lib">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <None Include="Libs\x86\libarcsoft_face_engine.lib" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
