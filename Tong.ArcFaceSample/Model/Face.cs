@@ -5,6 +5,8 @@ namespace Tong.ArcFaceSample.Model
 {
     public class Face : Result
     {
+        public int FaceId { get; set; }
+
         /// <summary>
         /// 路径
         /// </summary>
@@ -31,6 +33,16 @@ namespace Tong.ArcFaceSample.Model
         }
 
         public Face(Result result)
+        {
+            FaceRect = result.FaceRect;
+            Live = result.Live;
+            Age = result.Age;
+            Gender = result.Gender;
+            FaceFeature = result.FaceFeature;
+            Feature = result.Feature;
+        }
+
+        public void Update(Result result)
         {
             FaceRect = result.FaceRect;
             Live = result.Live;

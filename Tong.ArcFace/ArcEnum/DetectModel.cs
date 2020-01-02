@@ -14,6 +14,6 @@ namespace Tong.ArcFace.ArcEnum
         /// <summary>
         /// RGB图像检测模型
         /// </summary>
-        DetectModelRgb = 0x1
+        Rgb = 0x1
     }
 }

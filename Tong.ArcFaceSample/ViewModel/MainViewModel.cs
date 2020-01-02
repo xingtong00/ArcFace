@@ -5,6 +5,7 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows;
 using System.Windows.Input;
@@ -16,6 +17,7 @@ using GalaSoft.MvvmLight;
 using GalaSoft.MvvmLight.Command;
 using log4net;
 using Tong.ArcFace;
+using Tong.ArcFace.ArcStruct;
 using Tong.ArcFace.Util;
 using Tong.ArcFaceSample.Model;
 using Point = System.Windows.Point;
@@ -244,7 +246,7 @@ namespace Tong.ArcFaceSample.ViewModel
             _capture.ImageGrabbed += CaptureOnImageGrabbed;
             _capture.Start();
             Recognition.Instance.Activation("5ukkmpE1D3wHuPer5Swy5SqmfvqeHMD3vhfACPVsrAyY", "2Yc39UJGj7sM6PoBs24iNmuWFwxxhy7t6mZrafLNUZEz");
-            Recognition.Instance.InitEngine();
+            Recognition.Instance.InitEngine(DetectionMode.Video);
             _recognitionThread = new Thread(FaceRecognition);
             _recognitionThread.Start();
         }
@@ -296,38 +298,34 @@ namespace Tong.ArcFaceSample.ViewModel
             try
             {
                 var recognizeResult = Recognition.Instance.DetectFaces(imageInfo);
-                List<Face> faces = new List<Face>();
-                foreach (var result in recognizeResult.Results)
+                Random random = new Random();
+                List<int> exist = new List<int>();
+                for (int i = 0; i < recognizeResult.MultiFaceInfo.FaceNum; i++)
                 {
-                    if (!_recognitionRectangle.Contains(result.FaceRect.Rectangle))
-                        break;
-                    if (result.FaceRect.Rectangle.Width < _minRecognitionRectangle)
-                        break;
-
-                    Face temp = new Face(result);
-                    Random random = new Random();
-                    temp.Path = _paths[random.Next(0, _paths.Count - 1)];
-                    temp.AnalysisTime = _analysisTime;
-                    for (var i = 0; i < _faces.Count; i++)
+                    int id = Marshal.PtrToStructure<int>(recognizeResult.MultiFaceInfo.FaceId + Marshal.SizeOf<int>() * i);
+                    exist.Add(id);
+                    var face = _faces.FirstOrDefault(x => x.FaceId == id);
+                    if (face == null)
                     {
-                        var face = _faces[i];
-                        Rectangle intersection =
-                            Rectangle.Intersect(result.FaceRect.Rectangle, face.FaceRect.Rectangle);
-                        if (intersection.IsEmpty)
-                            continue;
-                        double maxWidth = face.FaceRect.Rectangle.Width;
-                        double minWidth = face.FaceRect.Rectangle.Width * 0.5;
-                        if (maxWidth >= face.FaceRect.Rectangle.Width && face.FaceRect.Rectangle.Width > minWidth)
-                        {
-                            temp.Path = face.Path;
-                            temp.CreateAt = face.CreateAt;
-                            break;
-                        }
+                        Face temp = new Face(recognizeResult.Results[i]);
+                        temp.FaceId = id;
+                        temp.Path = _paths[random.Next(0, _paths.Count - 1)];
+                        temp.AnalysisTime = _analysisTime;
+                        _faces.Add(temp);
                     }
-                    faces.Add(temp);
+                    else
+                    {
+                        face.Update(recognizeResult.Results[i]);
+                    }
                 }
-                _faces.Clear();
-                _faces.AddRange(faces);
+                for (int i = 0; i < _faces.Count; i++)
+                {
+                    if (exist.Any(x => x == _faces[i].FaceId))
+                    {
+                        continue;
+                    }
+                    _faces.RemoveAt(i);
+                }
                 GenerateFrameImg(imageInfo.Height, imageInfo.Width);
             }
             catch (Exception e)
@@ -366,7 +364,7 @@ namespace Tong.ArcFaceSample.ViewModel
                     ////сробио
                     //drawingContext.DrawLine(pen2, new Point(rect.Right, rect.Bottom), new Point(rect.Right, rect.Bottom - width));
 
-                    Rect prompt = new Rect(new Point(rect.Left + rect.Width /2 - _promptWidth / 2, rect.Top - (_promptHeight)), new System.Windows.Size(_promptWidth, _promptHeight));
+                    Rect prompt = new Rect(new Point(rect.Left + rect.Width / 2 - _promptWidth / 2, rect.Top - (_promptHeight)), new System.Windows.Size(_promptWidth, _promptHeight));
                     if (_faces[i].IsAnalysis)
                         continue;
                     ImageSource img = new BitmapImage(new Uri(_faces[i].Path, UriKind.Relative));
