@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Tong.ArcFace.ArcStruct
+﻿namespace Tong.ArcFace.ArcStruct
 {
     /// <summary>
     /// 激活文件信息

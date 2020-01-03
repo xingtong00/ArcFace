@@ -22,6 +22,15 @@ namespace Tong.ArcFace
         public static extern int Activation(string appId, string sdkKey);
 
         /// <summary>
+        /// 用于在线激活SDK
+        /// </summary>
+        /// <param name="appId">SDK对应的AppID</param>
+        /// <param name="sdkKey">SDK对应的SDKKey</param>
+        /// <returns>调用结果</returns>
+        [DllImport(DllPath, EntryPoint = "ASFOnlineActivation", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int OnlineActivation(string appId, string sdkKey);
+
+        /// <summary>
         /// 初始化引擎
         /// </summary>
         /// <param name="detectMode">VIDEO模式:处理连续帧的图像数据,IMAGE模式:处理单张的图像数据</param>
@@ -204,5 +213,13 @@ namespace Tong.ArcFace
         /// <returns>调用结果</returns>
         [DllImport(DllPath, EntryPoint = "CallingConvention", CallingConvention = CallingConvention.Cdecl)]
         public static extern SdkVersion GetVersion(IntPtr pEngine);
+
+        /// <summary>
+        /// 获取激活文件信息
+        /// </summary>
+        /// <param name="activeFileInfo">激活文件信息</param>
+        /// <returns>调用结果</returns>
+        [DllImport(DllPath, EntryPoint = "ASFGetActiveFileInfo", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int GetActiveFileInfo(out ActiveFileInfo activeFileInfo);
     }
 }
