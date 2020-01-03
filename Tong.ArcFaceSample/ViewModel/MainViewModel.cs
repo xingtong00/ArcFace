@@ -245,7 +245,7 @@ namespace Tong.ArcFaceSample.ViewModel
             _recognitionRectangle = new Rectangle(margin, margin, _capture.Height - 2 * margin, _capture.Width - 2 * margin);
             _capture.ImageGrabbed += CaptureOnImageGrabbed;
             _capture.Start();
-            Recognition.Instance.Activation("5ukkmpE1D3wHuPer5Swy5SqmfvqeHMD3vhfACPVsrAyY", "2Yc39UJGj7sM6PoBs24iNmuWFwxxhy7t6mZrafLNUZEz");
+            Recognition.Instance.Activation(ConfigurationManager.AppSettings["appid"], ConfigurationManager.AppSettings["sdkkey"]);
             Recognition.Instance.InitEngine(DetectionMode.Video);
             _recognitionThread = new Thread(FaceRecognition);
             _recognitionThread.Start();
